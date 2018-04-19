@@ -3,12 +3,21 @@
 #include <linux/cdev.h>
 #include <asm/uaccess.h>
 #include "cdev.h"
+#include "phc.h"
 
 #define DEVNAME "pphc"
 
 static int cdev_major;
 static struct cdev cdev_st;
 static struct file_operations depftom_fops;
+
+static inline uint64_t pphc_rdtsc(void) {
+  uint32_t a,c,d;
+
+  asm volatile("rdtscp" : "=a" (a), "=d" (d), "=c"(c));
+  return ((((uint64_t)a) | (((uint64_t)d) << 32)) * 10) / 33;
+}
+
 
 int pphc_cdev_init(void) {
   int ret;
@@ -55,18 +64,25 @@ static int pphc_cdev_release(struct inode *inode, struct file *filep)
 static ssize_t pphc_cdev_read(struct file *filep, char __user *buf,
 				 size_t count, loff_t *offset)
 {
-  char tmp_buf[8];
+  char tmp_buf[24];
+  uint64_t phc_count;
+  uint64_t rdtsc_count1, rdtsc_count2;
   
-  if (count > 8) {
-    count = 8;
+  if (count > 24) {
+    count = 24;
   }
 
+  rdtsc_count1 = pphc_rdtsc();
+  phc_count = phc_interface_read();
+  rdtsc_count2 = pphc_rdtsc();
+  memcpy(tmp_buf, &phc_count, 8);
+  memcpy(tmp_buf + 8, &rdtsc_count1, 8);
+  memcpy(tmp_buf + 16, &rdtsc_count2, 8);
+  
   if(copy_to_user(buf, tmp_buf, count)) {
-    kfree(tmp_buf);
     return -EFAULT;
   }
 
-  kfree(tmp_buf);
   return count;
 }
 

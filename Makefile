@@ -1,9 +1,9 @@
 obj-m := pphc.o
-pphc-objs := main.o cdev.o
+pphc-objs := main.o cdev.o phc.o
 
 default:
 
-pphc.ko: main.c cdev.c
+pphc.ko: main.c cdev.c phc.c
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
 
 install: pphc.ko
