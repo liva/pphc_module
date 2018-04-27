@@ -11,6 +11,9 @@ install: pphc.ko
 	sudo cp pphc.ko /lib/modules/$(shell uname -r)
 	sudo depmod
 	sudo modprobe pphc
+	-sudo rm /dev/pphc
+	major=`cat /proc/devices | grep pphc | cut -d ' ' -f 1`; sudo mknod /dev/pphc c $$major 0
+
 
 clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
